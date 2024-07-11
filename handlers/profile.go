@@ -48,7 +48,7 @@ func ProfileView(c *gin.Context) {
 	}
 
 	var user models.User
-	err := config.DB.QueryRow("SELECT id, email, username FROM users WHERE id = ?", userID).Scan(&user.ID, &user.Email, &user.Username)
+	err := config.DB.QueryRow("SELECT id, email, username, name, surname FROM users WHERE id = ?", userID).Scan(&user.ID, &user.Email, &user.Username, &user.Name, &user.Surname)
 	if err != nil {
 		log.Println("Failed to retrieve user profile:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user profile"})
@@ -57,7 +57,10 @@ func ProfileView(c *gin.Context) {
 
 	log.Println("User profile retrieved for user ID:", user.ID)
 	c.HTML(http.StatusOK, "profile.html", gin.H{
-		"user": user,
+		"Username": user.Username,
+		"Email":    user.Email,
+		"Name":     user.Name,
+		"Surname":  user.Surname,
 	})
 }
 
