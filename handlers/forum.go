@@ -25,6 +25,9 @@ func CreatePost(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Post created successfully"})
 }
+func RenderCreatePostPage(c *gin.Context) {
+	c.HTML(http.StatusOK, "create_post.html", nil)
+}
 
 func CreateComment(c *gin.Context) {
 	var input models.Comment
