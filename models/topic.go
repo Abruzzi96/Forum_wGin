@@ -1,9 +1,12 @@
 package models
 
 type Topic struct {
-	ID       int   `json:"id"`
+	ID       int    `json:"id"`
 	Title    string `json:"title"`
+	Username string `json:"username"`
 	Content  string `json:"content"`
 	Category string `json:"category"`
-	UserID   int   `json:"user_id"`
+	UserID   int    `json:"user_id"`
 }
+
+// is this needed ?

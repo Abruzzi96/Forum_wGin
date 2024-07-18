@@ -1,4 +1,5 @@
 {{ define "content" }}
+
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -6,142 +7,84 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ .title }}</title>
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f9f9f9;
-        }
-
-        header {
-            background-color: #333;
-            color: #fff;
-            padding: 10px 0;
-            text-align: center;
-        }
-
-        header h1 {
-            margin: 0;
-            font-size: 24px;
-        }
-
-        nav {
-            display: flex;
-            justify-content: center;
-            background-color: #444;
-        }
-
-        nav ul {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-            display: flex;
-        }
-
-        nav ul li {
-            margin: 0 15px;
-        }
-
-        nav ul li a {
-            color: #fff;
-            text-decoration: none;
-            padding: 10px 15px;
-            display: block;
-        }
-
-        nav ul li a:hover {
-            background-color: #555;
-        }
-
-        #user-info {
-            margin-left: auto;
-            display: flex;
-            align-items: center;
-        }
-
-        #user-info span {
-            margin-right: 10px;
-            color: #fff;
-        }
-
-        main {
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
-            background-color: #fff;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        footer {
-            text-align: center;
-            padding: 10px 0;
-            background-color: #333;
-            color: #fff;
-        }
-
-        .popup {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            justify-content: center;
-            align-items: center;
-        }
-
-        .popup-content {
-            background: #fff;
-            padding: 20px;
+        .google-login-btn {
+            display: inline-block;
+            background: #4285F4;
+            color: white;
+            border: none;
             border-radius: 5px;
-            width: 300px;
+            font-size: 16px;
+            font-weight: 500;
+            padding: 10px 20px;
             text-align: center;
-        }
-
-        .close-btn {
-            float: right;
             cursor: pointer;
+            text-decoration: none;
+        }
+        .google-login-btn img {
+            height: 20px;
+            width: 20px;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        .google-login-btn:hover {
+            background: #357AE8;
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>FIXIT FORUM</h1>
-        <nav>
-            <ul>
-                <li><a href="/">Anasayfa</a></li>
-                <li><a href="/profile">Profil</a></li>
-                <li><a href="/create-post">Konu Olustur</a></li>
-                <li><a href="#" id="login-btn">Giriş Yap</a></li>
-                <li><a href="#" id="register-btn">Kayıt Ol</a></li>
-                <li><a href="#" id="logout-btn" style="display: none;">Çıkış</a></li>
-                <li id="user-info" style="display: none;">
-                    <span id="user-name"></span> | 
-                    <span id="user-email"></span>
-                </li>
-            </ul>
-        </nav>
+        <div class="container">
+            <div class="logo">
+                <h1>FIXIT FORUM</h1>
+            </div>
+            <nav class="navigation">
+                <ul>
+                    <li><a href="/" id="home-link">Anasayfa</a></li>
+                    <li><a href="/forum" id="forum-link">Forum</a></li>
+                    <li><a href="/gallery" id="gallery-link">Galeri</a></li>
+                    <li><a href="/rules" id="rules-link">Kurallar</a></li>
+                    <li><a href="/profile" id="profile-link" style="display: none;">Profil</a></li>
+                    <li><a href="#" id="login-btn">Giriş Yap</a></li>
+                    <li><a href="#" id="register-btn">Kayıt Ol</a></li>
+                    <li><a href="#" id="logout-btn" style="display: none;">Çıkış</a></li>
+                    <li id="user-info" style="display: none;">
+                        <span id="user-name"></span> | 
+                        <span id="user-email"></span>
+                    </li>
+                </ul>
+            </nav>
+        </div>
     </header>
-
-    <main id="content">
-    
-    </main>
 
     <!-- Giriş Yap Pop-up -->
     <div id="login-popup" class="popup">
         <div class="popup-content">
             <span class="close-btn" id="close-login">&times;</span>
             <h2>Giriş Yap</h2>
-            <form id="login-form">
+            <form id="login-form" method="POST" action="/login">
                 <label for="login-email">Email:</label>
                 <input type="email" id="login-email" name="email" required>
                 <label for="login-password">Şifre:</label>
                 <input type="password" id="login-password" name="password" required>
                 <button type="submit">Giriş Yap</button>
             </form>
+            <a href="/auth/google/login" class="google-login-btn">
+                <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo">Google ile Giriş Yap
+            </a>
+            <a href="/auth/github/login" class="github-login-btn">
+                <button type="button">
+                    <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub logo" style="height: 20px; width: 20px; margin-right: 10px; vertical-align: middle;">GitHub ile Giriş Yap
+                </button>
+            </a>
+            <a href="/auth/facebook/login" class="facebook-login-btn">
+                <button type="button">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="Facebook logo" style="height: 20px; width: 20px; margin-right: 10px; vertical-align: middle;">Facebook ile Giriş Yap
+                </button>
+            </a>
+            
         </div>
     </div>
 
@@ -150,24 +93,37 @@
         <div class="popup-content">
             <span class="close-btn" id="close-register">&times;</span>
             <h2>Kayıt Ol</h2>
-            <form id="register-form">
+            <form id="register-form" method="POST" action="/register">
                 <label for="register-username">Kullanıcı Adı:</label>
-                <input type="text" id="register-username" name="username" required>
+                <input type="text" id="register-username" name="username" required><br>
                 <label for="register-email">Email:</label>
-                <input type="email" id="register-email" name="email" required>
+                <input type="email" id="register-email" name="email" required><br>
                 <label for="register-password">Şifre:</label>
-                <input type="password" id="register-password" name="password" required>
+                <input type="password" id="register-password" name="password" required><br>
                 <label for="register-name">İsim:</label>
-                <input type="text" id="register-name" name="name" required>
+                <input type="text" id="register-name" name="name" required><br>
                 <label for="register-surname">Soyisim:</label>
-                <input type="text" id="register-surname" name="surname" required>
+                <input type="text" id="register-surname" name="surname" required><br>
                 <button type="submit">Kayıt Ol</button>
             </form>
         </div>
     </div>
 
+    <!-- Reklamlar -->
+    <div class="ad-left">
+        <h3>REKLAMLAR</h3><br>
+        <img src="/static/images/hells.jpg" alt="Reklam 1" width="250"><br><br>  
+        <img src="/static/images/never_stop_riding.jpg" alt="Reklam 2" width="250">
+    </div>
+    <div class="ad-right">
+        <h3>REKLAMLAR</h3><br>
+        <img src="/static/images/Sonny_Barger.jpg" alt="Reklam 3" width="250"><br><br> 
+        <img src="/static/images/soa.jpg" alt="Reklam 4" width="250">
+    </div>
+    <!-- Reklamlar -->
+
     <footer>
-        <p>&copy; 2024 FIXIT FORUM. Tüm Hakları Saklıdır.</p>
+        <p>&copy; 2024 FIXIT FORUM</p>
     </footer>
 
     <script src="/static/js/main.js"></script>

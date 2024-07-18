@@ -9,9 +9,49 @@ import (
 
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 )
 
-var DB *sql.DB
+var (
+	DB                *sql.DB
+	GoogleOAuthConfig *oauth2.Config
+)
+
+var (
+	GithubClientID     string
+	GithubClientSecret string
+	GithubRedirectURL  string
+)
+var (
+	FacebookClientID     string
+	FacebookClientSecret string
+	FacebookRedirectURL  string
+)
+
+func LoadConfig() {
+	err := godotenv.Load()
+	if err != nil {
+		panic("Error loading .env file")
+	}
+
+	GithubClientID = os.Getenv("GITHUB_CLIENT_ID")
+	GithubClientSecret = os.Getenv("GITHUB_CLIENT_SECRET")
+	GithubRedirectURL = os.Getenv("GITHUB_REDIRECT_URL")
+	FacebookClientID = os.Getenv("FACEBOOK_CLIENT_ID")
+	FacebookClientSecret = os.Getenv("FACEBOOK_CLIENT_SECRET")
+	FacebookRedirectURL = os.Getenv("FACEBOOK_REDIRECT_URL")
+}
+
+func InitOAuthConfig(clientID, clientSecret, redirectURL string) {
+	GoogleOAuthConfig = &oauth2.Config{
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		RedirectURL:  redirectURL,
+		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"},
+		Endpoint:     google.Endpoint,
+	}
+}
 
 func InitDB() error {
 	// .env dosyasını yükle
@@ -51,8 +91,9 @@ func createTables() error {
 		name TEXT,
 		surname TEXT,
 		created_at DATETIME,
-		updated_at DATETIME
-
+		updated_at DATETIME,
+		githubid INTEGER,
+		role TEXT DEFAULT 'user'
 	);`
 	_, err := DB.Exec(createUserTable)
 	if err != nil {
@@ -65,11 +106,13 @@ func createTables() error {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		title TEXT,
 		content TEXT,
+		username TEXT,
 		user_id INTEGER,
 		likes INTEGER DEFAULT 0,
 		dislikes INTEGER DEFAULT 0,
 		created_at DATETIME,
-		updated_at DATETIME
+		updated_at DATETIME,
+		image_url TEXT
 	);`
 	_, err = DB.Exec(createPostTable)
 	if err != nil {
@@ -110,12 +153,22 @@ func createTables() error {
 		post_id INTEGER,
 		category_id INTEGER,
 		FOREIGN KEY (post_id) REFERENCES posts(id),
-		FOREIGN KEY (category_id) REFERENCES categories(id)
+		FOREIGN KEY (category_id) REFERENCES categories(id),
+		PRIMARY KEY (post_id, category_id)
 	);`
 	_, err = DB.Exec(createPostCategoriesTable)
 	if err != nil {
 		log.Fatalf("Failed to create post_categories table: %v", err)
 		return fmt.Errorf("failed to create post_categories table: %v", err)
+	}
+
+	// Insert initial categories
+	initialCategories := []string{"Tamir", "Bakim Onarim", "Yedek Parca"}
+	for _, category := range initialCategories {
+		_, err := DB.Exec("INSERT OR IGNORE INTO categories (name) VALUES (?)", category)
+		if err != nil {
+			log.Fatalf("Error inserting initial categories: %v", err)
+		}
 	}
 
 	createSessionTable := `

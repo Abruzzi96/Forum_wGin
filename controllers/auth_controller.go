@@ -9,16 +9,15 @@ import (
 	"MyForum/models"
 	"MyForum/utils"
 
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // Register handles user registration.
 func Register(c *gin.Context) {
 	var input models.User
 	if err := c.BindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON provided"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON provided"}) ////git
 		fmt.Println("Invalid JSON provided:", err)
 		return
 	}
@@ -83,6 +82,7 @@ func Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Logout successful"})
 }
 
+// Login handles user login.
 func Login(c *gin.Context) {
 	var input struct {
 		Email    string `json:"email"`
@@ -98,7 +98,7 @@ func Login(c *gin.Context) {
 	user, err := getUserByEmail(input.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Mail veya Şifre Yanlış"})
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		}
@@ -126,6 +126,8 @@ func Login(c *gin.Context) {
 		},
 	})
 }
+
+// GoogleLogin handles the Google login redirection.
 
 func getUserByEmail(email string) (*models.User, error) {
 	var user models.User

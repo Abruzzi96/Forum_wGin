@@ -3,6 +3,8 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"MyForum/config"
 	"MyForum/models"
@@ -48,7 +50,7 @@ func ProfileView(c *gin.Context) {
 	}
 
 	var user models.User
-	err := config.DB.QueryRow("SELECT id, email, username, name, surname FROM users WHERE id = ?", userID).Scan(&user.ID, &user.Email, &user.Username, &user.Name, &user.Surname)
+	err := config.DB.QueryRow("SELECT id, email, username FROM users WHERE id = ?", userID).Scan(&user.ID, &user.Email, &user.Username)
 	if err != nil {
 		log.Println("Failed to retrieve user profile:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user profile"})
@@ -57,12 +59,82 @@ func ProfileView(c *gin.Context) {
 
 	log.Println("User profile retrieved for user ID:", user.ID)
 	c.HTML(http.StatusOK, "profile.html", gin.H{
-		"Username": user.Username,
-		"Email":    user.Email,
-		"Name":     user.Name,
-		"Surname":  user.Surname,
+		"user": user,
 	})
 }
+
+func GetUserPosts(c *gin.Context) {
+	userID := c.Param("id")
+	var posts []models.Post
+
+	// Query to fetch posts and their category IDs
+	rows, err := config.DB.Query(`
+		SELECT p.id, p.title, p.content, p.user_id, p.image_url, p.likes, p.dislikes, 
+			GROUP_CONCAT(pc.category_id) AS category_ids
+		FROM posts p
+		LEFT JOIN post_categories pc ON p.id = pc.post_id
+		WHERE p.user_id = ?
+		GROUP BY p.id, p.title, p.content, p.user_id, p.image_url, p.likes, p.dislikes
+	`, userID)
+	if err != nil {
+		log.Println("Error fetching user posts:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user posts"})
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var post models.Post
+		var categoryIDs string
+		if err := rows.Scan(&post.ID, &post.Title, &post.Content, &post.UserID, &post.ImageURL, &post.Likes, &post.Dislikes, &categoryIDs); err != nil {
+			log.Println("Error scanning post row:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user posts"})
+			return
+		}
+
+		// Convert the comma-separated category IDs string to a slice of integers
+		if categoryIDs != "" {
+			for _, idStr := range strings.Split(categoryIDs, ",") {
+				id, err := strconv.Atoi(idStr)
+				if err == nil {
+					post.CategoryIDs = append(post.CategoryIDs, id)
+				}
+			}
+		}
+
+		posts = append(posts, post)
+	}
+
+	c.JSON(http.StatusOK, posts)
+}
+
+/*func GetUserLikes(c *gin.Context) {
+	userID := c.Param("id")
+	var likes []models.Like
+
+	err := config.DB.Select(&likes, "SELECT * FROM likes WHERE user_id = ?", userID)
+	if err != nil {
+		log.Println("Error fetching user likes:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user likes"})
+		return
+	}
+
+	c.JSON(http.StatusOK, likes)
+}
+
+func GetUserComments(c *gin.Context) {
+	userID := c.Param("id")
+	var comments []models.Comment
+
+	err := config.DB.Select(&comments, "SELECT * FROM comments WHERE user_id = ?", userID)
+	if err != nil {
+		log.Println("Error fetching user comments:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user comments"})
+		return
+	}
+
+	c.JSON(http.StatusOK, comments)
+}*/
 
 /*func ProfileUpdate(c *gin.Context) {
 	userID := utils.GetUserIDFromSession(c)

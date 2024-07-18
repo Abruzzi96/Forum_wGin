@@ -1,7 +1,10 @@
 package controllers
 
 import (
+	"fmt"
+	"log"
 	"net/http"
+	"strings"
 
 	"MyForum/config"
 	"MyForum/models"
@@ -9,28 +12,131 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// CreatePost handles the creation of a new post
-func CreatePost(c *gin.Context) {
-	var input models.Post
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	stmt, err := config.DB.Prepare("INSERT INTO posts (title, content, user_id) VALUES (?, ?, ?)")
+func CreatePostWithPost(post models.Post) error {
+	// Start a transaction
+	tx, err := config.DB.Begin()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to prepare statement"})
-		return
+		log.Println("Transaction start error:", err)
+		return err
 	}
-	defer stmt.Close()
 
-	_, err = stmt.Exec(input.Title, input.Content, input.UserID)
+	// Insert into posts table
+	query := `
+	INSERT INTO posts (user_id, title, content, image_url, created_at)
+	VALUES (?, ?, ?, ?, ?)
+	RETURNING id
+	`
+	var postID int
+	err = tx.QueryRow(query, post.UserID, post.Title, post.Content, post.ImageURL, post.CreatedAt).Scan(&postID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create post"})
+		log.Println("Error inserting post:", err)
+		tx.Rollback()
+		return err
+	}
+
+	// Insert categories into post_categories table
+	categoryQuery := `INSERT INTO post_categories (post_id, category_id) VALUES (?, ?)`
+	for _, categoryID := range post.CategoryIDs {
+		_, err := tx.Exec(categoryQuery, postID, categoryID)
+		if err != nil {
+			log.Println("Error inserting post category:", err)
+			tx.Rollback()
+			return err
+		}
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		log.Println("Transaction commit error:", err)
+		return err
+	}
+
+	return nil
+}
+
+// GetPosts retrieves all posts
+func GetPosts(c *gin.Context) {
+	query := "SELECT id, title, content, likes, dislikes, user_id, username, image_url, created_at FROM posts ORDER BY created_at DESC"
+	fmt.Println("SQL Query:", query) // Print SQL query for debugging
+
+	rows, err := config.DB.Query(query)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch posts"})
+		return
+	}
+	defer rows.Close()
+
+	var posts []models.Post
+	for rows.Next() {
+		var post models.Post
+		if err := rows.Scan(&post.ID, &post.Title, &post.Content, &post.Likes, &post.Dislikes, &post.UserID, &post.Username, &post.ImageURL, &post.CreatedAt); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan post"})
+			return
+		}
+		posts = append(posts, post)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"posts": posts})
+}
+
+func GetPost(c *gin.Context) {
+	// Extract post ID from URL parameter
+	id := c.Param("id")
+
+	var post models.Post
+	var categoryIDs []int
+	var categoryNames []string
+
+	// Query to fetch post details including username from users table
+	err := config.DB.QueryRow(`
+		SELECT p.id, p.title, p.content, p.likes, p.dislikes, p.user_id, p.image_url, u.username
+		FROM posts p
+		INNER JOIN users u ON p.user_id = u.id
+		WHERE p.id = ?
+	`, id).Scan(&post.ID, &post.Title, &post.Content, &post.Likes, &post.Dislikes, &post.UserID, &post.ImageURL, &post.Username)
+
+	if err != nil {
+		log.Println("Error fetching post:", err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Post created successfully"})
+	// Query to fetch category IDs and names
+	rows, err := config.DB.Query(`
+		SELECT c.id, c.name
+		FROM categories c
+		INNER JOIN post_categories pc ON c.id = pc.category_id
+		WHERE pc.post_id = ?
+	`, post.ID)
+	if err != nil {
+		log.Println("Error fetching categories:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching categories"})
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var categoryID int
+		var categoryName string
+		if err := rows.Scan(&categoryID, &categoryName); err != nil {
+			log.Println("Error scanning category:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error scanning categories"})
+			return
+		}
+		categoryIDs = append(categoryIDs, categoryID)
+		categoryNames = append(categoryNames, categoryName)
+	}
+
+	post.CategoryIDs = categoryIDs
+
+	// Convert category names slice to a comma-separated string for display purposes
+	categoriesString := strings.Join(categoryNames, ", ")
+
+	c.HTML(http.StatusOK, "post.html", gin.H{
+		"Post":       post,
+		"Categories": categoriesString,
+	})
 }
 
 // CreateComment handles the creation of a new comment
@@ -127,40 +233,4 @@ func DislikeComment(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Comment disliked"})
-}
-
-// GetPosts retrieves all posts
-func GetPosts(c *gin.Context) {
-	rows, err := config.DB.Query("SELECT id, title, content, likes, dislikes, user_id FROM posts")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch posts"})
-		return
-	}
-	defer rows.Close()
-
-	var posts []models.Post
-	for rows.Next() {
-		var post models.Post
-		if err := rows.Scan(&post.ID, &post.Title, &post.Content, &post.Likes, &post.Dislikes, &post.UserID); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan post"})
-			return
-		}
-		posts = append(posts, post)
-	}
-
-	c.HTML(http.StatusOK, "index.html", gin.H{"Posts": posts})
-}
-
-// GetPost retrieves a single post by ID
-func GetPost(c *gin.Context) {
-	id := c.Param("id")
-	var post models.Post
-	err := config.DB.QueryRow("SELECT id, title, content, likes, dislikes, user_id FROM posts WHERE id = ?", id).
-		Scan(&post.ID, &post.Title, &post.Content, &post.Likes, &post.Dislikes, &post.UserID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
-		return
-	}
-
-	c.HTML(http.StatusOK, "post.html", gin.H{"Post": post})
 }
