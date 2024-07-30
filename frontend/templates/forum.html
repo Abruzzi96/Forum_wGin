@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>FIXIT</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <main id="content">
+        {{ block "content" . }}{{ end }}
+    </main>
+
+    <main id="post-content">
+        <div>
+            <a href="/create-post">Create a New Post</a>
+        </div>
+
+        <div>
+            <label for="category-filter">Filter by Category:</label>
+            <select id="category-filter">
+                <option value="">All</option>
+                <option value="Tamir">Tamir</option>
+                <option value="Bakim Onarim">Bakim Onarim</option>
+                <option value="Yedek Parca">Yedek Parca</option>
+                <!-- Add more categories as needed -->
+            </select>
+            <button id="filter-button">Filter</button>
+        </div>
+        <div id="threads" style="margin-top: 20px;">
+            
+            <!-- Threads will be displayed here -->
+        </div>
+    </main><br><br><br><br>
+
+    <footer>
+        <p>&copy; 2024 Forum Sitesi</p>
+    </footer>
+
+    <script src="/static/js/forum.js"></script>
+
+</body>
+</html>
